@@ -1,0 +1,79 @@
+%{
+#include <stdio.h>
+#include <stdlib.h>
+#include "calclist.h"
+extern calclist_ast_t* __gencalclistast;
+%}
+
+%union {
+	calclist_ast_t* a;
+	double d;
+	char s[256];
+	char k[256];
+	int i;
+}
+
+%token EOL  LIKEEQUAL EQUAL NOTEQUAL GTEQUAL LTEQUAL AND OR  NUMBER  STRING KEY
+
+%left EQUAL NOTEQUAL GTEQUAL LIKEEQUAL LTEQUAL
+%left '-' '+'
+%left '*' '/'
+
+%type <a> result exp key value
+%type <i> op '>' '<' 
+%type <i> bin_op 
+%type <k> KEY
+%type <s> STRING
+%type <d> NUMBER
+%type <i> LIKEEQUAL EQUAL NOTEQUAL GTEQUAL LTEQUAL AND OR
+%%
+
+calclist: result EOL { __gencalclistast = $1; }
+;
+
+value: NUMBER { 
+		 //  printf("NUM:%lf\n", $1);
+		   $$ = new_calclist_num($1); 
+	   }
+	| STRING { 
+		   printf("STRING:%s\n", $1);
+		$$ = new_calclist_string($1); 
+	}
+;
+
+key: KEY { 
+		 printf("Key:%s\n", $1); 
+		 $$ = new_calclist_key($1); 
+	 }
+;
+
+op: EQUAL  { $$ = EQUAL; }
+	| NOTEQUAL  { $$ = NOTEQUAL; }
+	| GTEQUAL  {  $$ = GTEQUAL;}
+	| LTEQUAL  { $$ = LTEQUAL; }
+	| LIKEEQUAL  { $$ = LIKEEQUAL; }
+	| '>'  { $$ = '>';}
+	| '<'  { $$ = '<'; }
+;
+
+
+exp: key op value {
+	   	// printf("op: %d\n",$2); 
+		 $$ = new_calclist_ast($2, $1, $3); 
+		 }
+	| '(' exp ')'  { 
+		$$ = $2;
+		}
+;
+
+bin_op: AND { $$ = AND; }
+	| OR { $$ = OR; }
+;
+	
+result: result bin_op exp { 
+			$$ = new_calclist_ast($2, $1, $3); 
+		}
+	| exp  { $$ = $1; }
+;	
+
+%%
